@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pedidos de Blusas Umadebo – SuetamSoft</title>
+
+  <!-- Bootstrap (opcional) -->
+  <link
+    href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.1/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+
+  <!-- Firebase (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    body { margin: 0; padding: 0; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: #f4f4f4; }
+    .container { max-width: 700px; margin: 2rem auto; background: #fff; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    h1 { font-size: 1.75rem; margin-bottom: 1rem; text-align: center; }
+    .hidden { display: none !important; }
+    .order-card { margin-bottom: 1rem; padding: 1rem; border: 1px solid #ddd; border-radius: 6px; background: #fafafa; }
+    .location-button { margin: 0.25rem; }
+    .location-card { margin-bottom: 1rem; padding: 1rem; border: 1px solid #ddd; border-radius: 6px; background: #fafafa; position: relative; }
+    .btn { margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    
+
+    <style>
+  /* Estilos customizados para o login */
+  #loginDiv .card {
+    border: none;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+  }
+  #loginDiv .card-header {
+    background-color: #007bff;
+    color: #fff;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    text-align: center;
+    font-weight: 500;
+    font-size: 1.25rem;
+  }
+  #loginDiv .locality-btn {
+    margin: 0.25rem;
+    transition: transform 0.15s;
+  }
+  #loginDiv .locality-btn:hover {
+    transform: scale(1.05);
+  }
+  #loginDiv #masterLoginForm {
+    margin-top: 1rem;
+  }
+  #loginDiv #masterLoginForm .card {
+    border: 1px solid #dee2e6;
+  }
+  #loginDiv #masterLoginForm .card-header {
+    background-color: #28a745;
+  }
+</style>
+
+    <!-- ===== Tela de Login ===== -->
+    <div id="loginDiv">
+        <div class="text-center mb-3">
+    <img
+      src="assets/images/logo-suetamsoft.png"
+      alt="Logomarca"
+      style="max-width: 90px; height: auto;"
+    />
+  </div>
+  <div class="card mx-auto" style="max-width: 500px;">
+    <div class="card-header">
+      Olá Lideres!! Bem-vindo(a) ao Pedido de Blusas Umadebo 2025
+    </div>
+    <div class="card-body">
+      <p class="mb-3 text-center">
+        <i class="fa fa-map-marker-alt me-2"></i>
+        <strong>Selecione sua localidade</strong> para entrar como gestor ou<br>
+        
+        <button id="btnMasterLogin" class="btn btn-link p-0">faça login como Mestre</button>
+      </p>
+
+      <div id="localitiesList" class="d-flex flex-wrap justify-content-center mb-3">
+        <!-- Os botões de localidades serão injetados aqui -->
+        <!-- Exemplo estático (remova ou comente se gerar dinamicamente): -->
+        <!--
+        <button class="btn btn-outline-primary locality-btn">Bairro Azul</button>
+        <button class="btn btn-outline-primary locality-btn">Centro</button>
+        <button class="btn btn-outline-primary locality-btn">Zona Norte</button>
+        -->
+      </div>
+
+      <!-- Formulário Mestre (inicialmente escondido) -->
+      <div id="masterLoginForm" class="hidden">
+        <div class="card">
+          <div class="card-header text-white">
+            Login Mestre
+          </div>
+          <div class="card-body">
+            <form id="loginForm">
+              <div class="mb-3">
+                <label for="emailInput" class="form-label">E-mail Mestre</label>
+                <input
+                  type="email"
+                  id="emailInput"
+                  class="form-control"
+                  placeholder="mestre@exemplo.com"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label for="passwordInput" class="form-label">Senha Mestre</label>
+                <input
+                  type="password"
+                  id="passwordInput"
+                  class="form-control"
+                  placeholder="Senha do mestre"
+                  required
+                />
+              </div>
+              <button type="submit" class="btn btn-success w-100">Entrar</button>
+            </form>
+            <div id="loginError" class="text-danger mt-2 hidden"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    <!-- ===== Tela Principal (após login de Mestre ou Gestor) ===== -->
+    <div id="appDiv" class="hidden">
+      <!-- Logout -->
+      <div class="d-flex justify-content-end mb-3">
+        <button id="logoutBtn" class="btn btn-outline-secondary">Sair</button>
+      </div>
+
+      <!-- Mestre: menu para gerenciar localidades e pedidos -->
+      <div id="masterMenuDiv" class="hidden text-center mb-4">
+        <button id="btnViewOrdersMaster" class="btn btn-primary">Visualizar Pedidos</button>
+        <button id="btnManageLocations" class="btn btn-secondary">Cadastrar Localidades</button>
+         
+      </div>
+
+      <!-- Gestor: mostra localidade atual -->
+      <div id="managerBanner" class="hidden mb-4">
+        <h5>Área do Gestor - Localidade: <span id="managerLocationName"></span></h5>
+      </div>
+
+      <!-- 1) Visualizar Pedidos (tanto Mestre quanto Gestor) -->
+      <div id="viewOrdersDiv" class="hidden">
+        <!-- Filtro para Mestre -->
+        <div id="masterFilterDiv" class="mb-3 hidden">
+          <label for="filterLocation" class="form-label">Filtrar por Localidade:</label>
+          <select id="filterLocation" class="form-select">
+            <option value="">Todos</option>
+          </select>
+        </div>
+
+        <!-- Formulário novo pedido -->
+        <div class="order-card">
+          <h5>Novo Pedido</h5>
+          <form id="orderForm">
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <label for="inputName" class="form-label">Nome</label>
+                <input
+                  type="text"
+                  id="inputName"
+                  class="form-control"
+                  placeholder="Nome do cliente"
+                  required
+                />
+              </div>
+              <div class="col-md-4 mb-3">
+                <label for="inputAge" class="form-label">Idade</label>
+                <input
+                  type="number"
+                  id="inputAge"
+                  class="form-control"
+                  placeholder="Idade"
+                  min="1"
+                  required
+                />
+              </div>
+              <!-- Categoria -->
+              <div class="col-md-4 mb-3">
+                <label for="selectCategory" class="form-label">Categoria</label>
+                <select id="selectCategory" class="form-select" required>
+                  <option value="adulto" selected>Adulto</option>
+                  <option value="recem_nascido">Recém Nascido</option>
+                  <option value="infantil">Infantil</option>
+                </select>
+              </div>
+              <!-- Tamanho dinâmico -->
+              <div class="col-md-4 mb-3">
+                <label for="selectSize" class="form-label">Tamanho</label>
+                <select id="selectSize" class="form-select" required>
+                  <!-- Preenchido por script -->
+                </select>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label for="inputLocation" class="form-label">Localidade</label>
+                <input type="text" id="inputLocation" class="form-control" readonly />
+              </div>
+            </div>
+            <button type="submit" id="btnSaveOrder" class="btn btn-success">
+              Salvar Pedido
+            </button>
+            <button id="btnDeleteAllOrders" class="btn btn-danger">Excluir Todos os Pedidos</button>
+          </form>
+        </div>
+
+        <!-- Título + botão Gerar Planilha lado a lado -->
+        <div class="d-flex justify-content-between align-items-center mt-4 mb-2">
+          <h5 class="mb-0">Pedidos Cadastrados</h5>
+          <button id="btnExportExcel" class="btn btn-success btn-sm">Gerar Planilha</button>
+        </div>
+        <div id="ordersContainer"></div>
+      </div>
+
+      <!-- 2) Cadastrar Localidades (apenas Mestre) -->
+      <div id="manageLocationsDiv" class="hidden">
+        <div class="location-card">
+          <h5>Nova Localidade</h5>
+          <form id="locationForm">
+            <div class="mb-3">
+              <label for="inputLocationName" class="form-label">Nome da Localidade</label>
+              <input
+                type="text"
+                id="inputLocationName"
+                class="form-control"
+                placeholder="Bairro X, Cidade Y"
+                required
+              />
+            </div>
+            <div class="mb-3">
+              <label for="inputManagerEmail" class="form-label">E-mail do Gestor</label>
+              <input
+                type="email"
+                id="inputManagerEmail"
+                class="form-control"
+                placeholder="gestor@exemplo.com"
+                required
+              />
+            </div>
+            <div class="mb-3">
+              <label for="inputManagerPassword" class="form-label">Senha do Gestor</label>
+              <input
+                type="password"
+                id="inputManagerPassword"
+                class="form-control"
+                placeholder="Senha temporária"
+                required
+              />
+              <div class="form-text">
+                Será criada uma conta para o gestor; envie essa senha a ele.
+              </div>
+            </div>
+            <button type="submit" class="btn btn-success">Salvar Localidade</button>
+          </form>
+        </div>
+
+        <h5 class="mt-4">Localidades Cadastradas</h5>
+        <div id="locationsContainer"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // -----------------------------
+    // 1) Inicializar Firebase
+    // -----------------------------
+    const firebaseConfig = {
+      apiKey: "AIzaSyC6efbk_F_4Nn_KSozdQZv53QPitsgVFx8",
+      authDomain: "pedidos-86289.firebaseapp.com",
+      projectId: "pedidos-86289",
+      storageBucket: "pedidos-86289.appspot.com",
+      messagingSenderId: "1098626881936",
+      appId: "1:1098626881936:web:4fdad6f5e1b9023f783b15"
+    };
+    // App principal (mestre e gestores)
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // App secundário (para criar gestores sem desconectar o mestre)
+    let secondaryApp;
+    try {
+      secondaryApp = firebase.app("Secondary");
+    } catch (e) {
+      secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary");
+    }
+    const secondaryAuth = secondaryApp.auth();
+
+    // -----------------------------
+    // 2) Referências de elementos
+    // -----------------------------
+    const loginDiv = document.getElementById("loginDiv");
+    const localitiesList = document.getElementById("localitiesList");
+    const btnMasterLogin = document.getElementById("btnMasterLogin");
+    const masterLoginForm = document.getElementById("masterLoginForm");
+    const loginForm = document.getElementById("loginForm");
+    const emailInput = document.getElementById("emailInput");
+    const passwordInput = document.getElementById("passwordInput");
+    const loginError = document.getElementById("loginError");
+
+    const appDiv = document.getElementById("appDiv");
+    const logoutBtn = document.getElementById("logoutBtn");
+
+    const masterMenuDiv = document.getElementById("masterMenuDiv");
+    const btnViewOrdersMaster = document.getElementById("btnViewOrdersMaster");
+    const btnManageLocations = document.getElementById("btnManageLocations");
+    const btnExportExcel = document.getElementById("btnExportExcel");
+
+    const managerBanner = document.getElementById("managerBanner");
+    const managerLocationName = document.getElementById("managerLocationName");
+
+    const viewOrdersDiv = document.getElementById("viewOrdersDiv");
+    const masterFilterDiv = document.getElementById("masterFilterDiv");
+    const filterLocation = document.getElementById("filterLocation");
+    const orderForm = document.getElementById("orderForm");
+    const inputName = document.getElementById("inputName");
+    const inputAge = document.getElementById("inputAge");
+    const selectCategory = document.getElementById("selectCategory");
+    const selectSize = document.getElementById("selectSize");
+    const inputLocation = document.getElementById("inputLocation");
+    const ordersContainer = document.getElementById("ordersContainer");
+
+    const manageLocationsDiv = document.getElementById("manageLocationsDiv");
+    const locationForm = document.getElementById("locationForm");
+    const inputLocationName = document.getElementById("inputLocationName");
+    const inputManagerEmail = document.getElementById("inputManagerEmail");
+    const inputManagerPassword = document.getElementById("inputManagerPassword");
+    const locationsContainer = document.getElementById("locationsContainer");
+
+    // Estado
+    let currentLocality = null; // Nome da localidade para gestor
+    let isMaster = false;
+
+    // -----------------------------
+    // 3) Carregar localidades na tela inicial
+    // -----------------------------
+    async function loadLocalitiesForLogin() {
+      localitiesList.innerHTML = "<p>Carregando localidades...</p>";
+      try {
+        const snapshot = await db.collection("localidade").orderBy("localidade", "asc").get();
+        localitiesList.innerHTML = "";
+        if (snapshot.empty) {
+          localitiesList.innerHTML = "<p>Nenhuma localidade cadastrada.</p>";
+          return;
+        }
+        snapshot.forEach((doc) => {
+          const loc = doc.data().localidade;
+          const btn = document.createElement("button");
+          btn.textContent = loc;
+          btn.classList.add("btn", "btn-outline-primary", "locality-btn");
+          btn.addEventListener("click", () => promptManagerLogin(loc));
+          localitiesList.appendChild(btn);
+        });
+      } catch (err) {
+        console.error("Erro ao carregar localidades:", err);
+        localitiesList.innerHTML = "<p>Erro ao carregar localidades.</p>";
+      }
+    }
+
+    // -----------------------------
+    // 4) Prompt de login do gestor
+    // -----------------------------
+    function promptManagerLogin(loc) {
+      const email = prompt(`E-mail do gestor para "${loc}":`);
+      if (!email) return;
+      const password = prompt("Senha do gestor:");
+      if (password === null) return;
+      auth.signInWithEmailAndPassword(email.trim(), password)
+        .then(() => {
+          currentLocality = loc;
+          isMaster = false;
+          showManagerView();
+        })
+        .catch((err) => {
+          alert("Falha ao autenticar gestor: " + err.message);
+        });
+    }
+
+    // -----------------------------
+    // 5) Mostrar formulário Mestre
+    // -----------------------------
+    btnMasterLogin.addEventListener("click", () => {
+      masterLoginForm.classList.remove("hidden");
+    });
+
+    // -----------------------------
+    // 6) Autenticar Mestre
+    // -----------------------------
+    loginForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+      loginError.classList.add("hidden");
+      auth.signInWithEmailAndPassword(email, password)
+        .then(() => {
+          isMaster = true;
+          currentLocality = null;
+          showMasterView();
+        })
+        .catch((err) => {
+          loginError.textContent = "Erro ao fazer login: " + err.message;
+          loginError.classList.remove("hidden");
+        });
+    });
+
+    // -----------------------------
+    // 7) Logout
+    // -----------------------------
+    logoutBtn.addEventListener("click", () => {
+      auth.signOut();
+      resetToLogin();
+    });
+
+    // -----------------------------
+    // 8) Estado de autenticação muda
+    // -----------------------------
+    auth.onAuthStateChanged((user) => {
+      if (!user) {
+        resetToLogin();
+      }
+    });
+
+    // -----------------------------
+    // 9) Mostrar tela do gestor
+    // -----------------------------
+    function showManagerView() {
+      loginDiv.classList.add("hidden");
+      appDiv.classList.remove("hidden");
+
+      managerBanner.classList.remove("hidden");
+      managerLocationName.textContent = currentLocality;
+
+      masterMenuDiv.classList.add("hidden");
+      manageLocationsDiv.classList.add("hidden");
+
+      masterFilterDiv.classList.add("hidden");
+      viewOrdersDiv.classList.remove("hidden");
+      inputLocation.value = currentLocality;
+      loadOrdersForManager();
+    }
+
+    // -----------------------------
+    // 10) Mostrar tela do mestre
+    // -----------------------------
+    function showMasterView() {
+      loginDiv.classList.add("hidden");
+      appDiv.classList.remove("hidden");
+
+      managerBanner.classList.add("hidden");
+      masterMenuDiv.classList.remove("hidden");
+
+      viewOrdersDiv.classList.add("hidden");
+      manageLocationsDiv.classList.add("hidden");
+    }
+
+    // -----------------------------
+    // 11) Resetar para login
+    // -----------------------------
+    function resetToLogin() {
+      loginDiv.classList.remove("hidden");
+      masterLoginForm.classList.add("hidden");
+      localitiesList.innerHTML = "";
+      loadLocalitiesForLogin();
+
+      appDiv.classList.add("hidden");
+      viewOrdersDiv.classList.add("hidden");
+      manageLocationsDiv.classList.add("hidden");
+      managerBanner.classList.add("hidden");
+      masterMenuDiv.classList.add("hidden");
+    }
+
+    // -----------------------------
+    // 12) Mestre navega entre Pedidos e Localidades
+    // -----------------------------
+    btnViewOrdersMaster.addEventListener("click", () => {
+      viewOrdersDiv.classList.remove("hidden");
+      manageLocationsDiv.classList.add("hidden");
+      masterFilterDiv.classList.remove("hidden");
+      loadFilterDropdown();
+      loadOrdersForMaster();
+      initializeCategorySize();
+    });
+    btnManageLocations.addEventListener("click", () => {
+      viewOrdersDiv.classList.add("hidden");
+      masterFilterDiv.classList.add("hidden");
+      manageLocationsDiv.classList.remove("hidden");
+      loadLocationsList();
+      loadLocationsDropdown();
+    });
+
+    // -----------------------------
+    // 13) Carregar dropdown de filtro (Mestre)
+    // -----------------------------
+    async function loadFilterDropdown() {
+      filterLocation.innerHTML = "<option value=\"\">Todos</option>";
+      try {
+        const snapshot = await db.collection("localidade").orderBy("localidade", "asc").get();
+        snapshot.forEach((doc) => {
+          const nome = doc.data().localidade;
+          const opt = document.createElement("option");
+          opt.value = nome;
+          opt.textContent = nome;
+          filterLocation.appendChild(opt);
+        });
+      } catch (err) {
+        console.error("Erro ao carregar filtro de localidade:", err);
+      }
+      filterLocation.onchange = () => loadOrdersForMaster();
+    }
+
+    // -----------------------------
+    // 14) CRUD de Localidades (Mestre)
+    // -----------------------------
+    async function loadLocationsDropdown() {
+      const selectLoc = document.getElementById("inputLocation");
+      if (!selectLoc) return;
+      try {
+        const snapshot = await db.collection("localidade").orderBy("localidade", "asc").get();
+        selectLoc.innerHTML = "";
+        snapshot.forEach((doc) => {
+          const nome = doc.data().localidade;
+          const opt = document.createElement("option");
+          opt.value = nome;
+          opt.textContent = nome;
+          selectLoc.appendChild(opt);
+        });
+        if (!selectLoc.children.length) {
+          const opt = document.createElement("option");
+          opt.value = "";
+          opt.textContent = "Nenhuma localidade cadastrada";
+          selectLoc.appendChild(opt);
+        }
+      } catch (err) {
+        console.error("Erro ao carregar dropdown:", err);
+        selectLoc.innerHTML = "<option disabled>Erro ao carregar</option>";
+      }
+    }
+
+    locationForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const nomeLoc = inputLocationName.value.trim();
+      const managerEmail = inputManagerEmail.value.trim();
+      const managerPassword = inputManagerPassword.value;
+
+      if (!nomeLoc || !managerEmail || !managerPassword) {
+        alert("Preencha todos os campos (localidade, e-mail e senha).");
+        return;
+      }
+      try {
+        const snap = await db.collection("localidade").where("localidade", "==", nomeLoc).get();
+        if (!snap.empty) {
+          alert("Essa localidade já existe.");
+          return;
+        }
+      } catch (err) {
+        console.error("Erro ao verificar duplicidade:", err);
+        alert("Erro ao verificar duplicidade.");
+        return;
+      }
+
+      let docRef;
+      try {
+        docRef = await db.collection("localidade").add({
+          localidade: nomeLoc,
+          managerEmail: managerEmail,
+          managerUid: ""
+        });
+      } catch (err) {
+        console.error("Erro ao salvar localidade:", err);
+        alert("Erro ao salvar localidade.");
+        return;
+      }
+
+      try {
+        const userCred = await secondaryAuth.createUserWithEmailAndPassword(
+          managerEmail,
+          managerPassword
+        );
+        const uidGestor = userCred.user.uid;
+        await db.collection("localidade").doc(docRef.id).update({
+          managerUid: uidGestor
+        });
+        inputLocationName.value = "";
+        inputManagerEmail.value = "";
+        inputManagerPassword.value = "";
+        loadLocationsList();
+        loadLocationsDropdown();
+      } catch (err) {
+        console.error("Erro ao criar usuário gestor:", err);
+        alert("Erro ao criar gestor. Localidade será removida.");
+        await db.collection("localidade").doc(docRef.id).delete();
+      }
+    });
+
+    async function loadLocationsList() {
+      locationsContainer.innerHTML = "";
+      try {
+        const snapshot = await db.collection("localidade").orderBy("localidade", "asc").get();
+        if (snapshot.empty) {
+          locationsContainer.innerHTML = "<p>Nenhuma localidade cadastrada.</p>";
+          return;
+        }
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          const card = document.createElement("div");
+          card.classList.add("location-card");
+          card.innerHTML = `
+            <strong>${data.localidade}</strong>
+            <button class="btn btn-sm btn-outline-primary edit-loc-btn" title="Editar Gestor">&#9998;</button>
+            <button class="btn btn-sm btn-outline-danger remove-loc-btn" title="Excluir">&times;</button>
+            <div class="mt-2" style="font-size:0.9rem; color:#555;">
+              E-mail gestor: ${data.managerEmail}
+            </div>
+          `;
+
+          const btnRemove = card.querySelector(".remove-loc-btn");
+          btnRemove.addEventListener("click", async () => {
+            if (confirm(`Excluir a localidade "${data.localidade}"?`)) {
+              try {
+                await db.collection("localidade").doc(doc.id).delete();
+                loadLocationsList();
+                loadLocationsDropdown();
+              } catch (err) {
+                console.error("Erro ao deletar localidade:", err);
+                alert("Erro ao excluir localidade.");
+              }
+            }
+          });
+
+          const btnEdit = card.querySelector(".edit-loc-btn");
+          btnEdit.addEventListener("click", async () => {
+            const novoEmail = prompt(
+              `Novo e-mail do gestor para "${data.localidade}":`,
+              data.managerEmail
+            );
+            if (!novoEmail) return;
+            try {
+              await db.collection("localidade").doc(doc.id).update({
+                managerEmail: novoEmail
+              });
+              alert(`E-mail do gestor atualizado para ${novoEmail}.`);
+              loadLocationsList();
+              loadLocationsDropdown();
+            } catch (err) {
+              console.error("Erro ao atualizar gestor:", err);
+              alert("Erro ao atualizar.");
+            }
+          });
+
+          locationsContainer.appendChild(card);
+        });
+      } catch (err) {
+        console.error("Erro ao carregar lista de localidades:", err);
+        locationsContainer.innerHTML = "<p>Erro ao carregar localidades.</p>";
+      }
+    }
+
+    // -----------------------------
+    // 15) Listas de tamanhos por categoria
+    // -----------------------------
+    const sizesByCategory = {
+      adulto: ["P", "M", "G", "GG", "XG"],
+      recem_nascido: ["RN", "P", "M", "G"],
+      infantil: ["2", "3", "4", "6", "6X", "8", "8X", "10", "10X", "12"]
+    };
+
+    function updateSizeOptions() {
+      const cat = selectCategory.value; // "adulto", "recem_nascido" ou "infantil"
+      selectSize.innerHTML = "";
+      sizesByCategory[cat].forEach((t) => {
+        const opt = document.createElement("option");
+        opt.value = t;
+        opt.textContent = t;
+        selectSize.appendChild(opt);
+      });
+    }
+
+    function initializeCategorySize() {
+      updateSizeOptions();
+    }
+
+    selectCategory.addEventListener("change", updateSizeOptions);
+
+    // -----------------------------
+    // 16) CRUD de Pedidos para Gestor (onSnapshot para atualização instantânea)
+    // -----------------------------
+    function loadOrdersForManager() {
+      ordersContainer.innerHTML = "";
+
+      console.log("🔍 Carregando pedidos para localidade:", currentLocality);
+
+      db.collection("orders")
+        .where("location", "==", currentLocality)
+        .orderBy("timestamp", "desc")
+        .onSnapshot((snapshot) => {
+          ordersContainer.innerHTML = "";
+
+          if (snapshot.empty) {
+            ordersContainer.innerHTML = "<p>Nenhum pedido nesta localidade.</p>";
+            return;
+          }
+
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            renderOrderCard(doc.id, data, /* isManagerView */ true);
+          });
+        }, (erro) => {
+          console.error("Erro no onSnapshot de pedidos:", erro);
+          ordersContainer.innerHTML = "<p>Erro ao carregar pedidos.</p>";
+        });
+
+      inputLocation.value = currentLocality;
+      initializeCategorySize();
+    }
+
+    // -----------------------------
+    // 17) CRUD de Pedidos para Mestre (com filtro, onSnapshot)
+    // -----------------------------
+    function loadOrdersForMaster() {
+      const filtro = filterLocation.value;
+      ordersContainer.innerHTML = "";
+      let query = db.collection("orders").orderBy("timestamp", "desc");
+      if (filtro) {
+        query = db.collection("orders")
+          .where("location", "==", filtro)
+          .orderBy("timestamp", "desc");
+      }
+      query.onSnapshot((snapshot) => {
+        ordersContainer.innerHTML = "";
+        if (snapshot.empty) {
+          ordersContainer.innerHTML = "<p>Nenhum pedido cadastrado.</p>";
+        } else {
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            renderOrderCard(doc.id, data, false);
+          });
+        }
+      }, (erro) => {
+        console.error("Erro no onSnapshot de pedidos:", erro);
+        ordersContainer.innerHTML = "<p>Erro ao carregar pedidos.</p>";
+      });
+      inputLocation.value = "";
+      initializeCategorySize();
+    }
+
+    function renderOrderCard(docId, data, isManagerView) {
+      const card = document.createElement("div");
+      card.classList.add("order-card");
+      card.innerHTML = `
+        <strong>${data.name}</strong>  |  Idade: ${data.age}  |  Categoria: ${data.typeSize}  |  Tamanho: ${data.size}  |  Localidade: ${data.location}
+        <button class="btn btn-sm btn-outline-primary edit-btn" title="Editar">&#9998;</button>
+        <button class="btn btn-sm btn-outline-danger remove-btn" title="Excluir">&times;</button>
+      `;
+
+      const btnRemove = card.querySelector(".remove-btn");
+      btnRemove.addEventListener("click", () => {
+        if (confirm("Excluir este pedido?")) {
+          if (isManagerView && data.location !== currentLocality) return;
+          db.collection("orders").doc(docId).delete().catch((err) => {
+            console.error("Erro ao deletar:", err);
+          });
+        }
+      });
+
+      const btnEdit = card.querySelector(".edit-btn");
+      btnEdit.addEventListener("click", () => {
+        if (isManagerView && data.location !== currentLocality) return;
+        // Preenche o formulário de edição com os valores atuais
+        inputName.value = data.name;
+        inputAge.value = data.age;
+        selectCategory.value = data.typeSize || "adulto";
+        updateSizeOptions();
+        selectSize.value = data.size;
+        inputLocation.value = data.location;
+
+        document.getElementById("btnSaveOrder").textContent = "Atualizar Pedido";
+        orderForm.onsubmit = (ev) => {
+          ev.preventDefault();
+          const updatedName = inputName.value.trim();
+          const updatedAge = inputAge.value.trim();
+          const updatedCategory = selectCategory.value;
+          const updatedSize = selectSize.value;
+          let updatedLocation = inputLocation.value;
+          if (!updatedName || !updatedAge || !updatedSize || !updatedLocation) {
+            alert("Preencha todos os campos.");
+            return;
+          }
+          if (isManagerView) updatedLocation = currentLocality;
+          db.collection("orders")
+            .doc(docId)
+            .update({
+              name: updatedName,
+              age: updatedAge,
+              typeSize: updatedCategory,
+              size: updatedSize,
+              location: updatedLocation
+            })
+            .then(() => {
+              orderForm.reset();
+              document.getElementById("btnSaveOrder").textContent = "Salvar Pedido";
+              orderForm.onsubmit = saveNewOrderListener;
+            })
+            .catch((err) => console.error("Erro ao atualizar:", err));
+        };
+      });
+
+      ordersContainer.appendChild(card);
+    }
+
+    // -----------------------------
+    // 18) Criar novo pedido
+    // -----------------------------
+    function saveNewOrderListener(event) {
+      event.preventDefault();
+      const name = inputName.value.trim();
+      const age = inputAge.value.trim();
+      const category = selectCategory.value;
+      const size = selectSize.value;
+      let locationVal = inputLocation.value;
+      if (!name || !age || !size || !locationVal) {
+        alert("Preencha todos os campos.");
+        return;
+      }
+      if (!isMaster) locationVal = currentLocality;
+
+      const orderObj = {
+        name,
+        age,
+        typeSize: category,
+        size,
+        location: locationVal,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      db.collection("orders")
+        .add(orderObj)
+        .then(() => orderForm.reset())
+        .catch((err) => console.error("Erro ao salvar:", err));
+    }
+    orderForm.addEventListener("submit", saveNewOrderListener);
+
+    // -----------------------------
+    // 19) Função de reautenticação do Mestre
+    // -----------------------------
+    function reauthenticateMaster(password) {
+      const user = auth.currentUser;
+      if (!user) return Promise.reject(new Error("Nenhum usuário logado."));
+      const credential = firebase.auth.EmailAuthProvider.credential(
+        user.email,
+        password
+      );
+      return user.reauthenticateWithCredential(credential);
+    }
+
+    // -----------------------------
+    // 20) Excluir todos os pedidos em lote
+    // -----------------------------
+    async function deleteAllOrdersBatch() {
+      const batch = db.batch();
+      const snapshot = await db.collection("orders").get();
+      if (snapshot.empty) return;
+      snapshot.forEach((doc) => {
+        batch.delete(db.collection("orders").doc(doc.id));
+      });
+      await batch.commit();
+    }
+
+    // -----------------------------
+    // 21) Event listener “Excluir Todos os Pedidos”
+    // -----------------------------
+    btnDeleteAllOrders.addEventListener("click", async () => {
+      const confirmDelete = confirm(
+        "Você realmente deseja excluir TODOS os pedidos? Essa ação é irreversível."
+      );
+      if (!confirmDelete) return;
+
+      const senhaAdmin = prompt("Digite a senha do Mestre para confirmar:");
+      if (senhaAdmin === null || senhaAdmin.trim() === "") {
+        alert("Operação cancelada: senha não informada.");
+        return;
+      }
+
+      try {
+        await reauthenticateMaster(senhaAdmin.trim());
+        await deleteAllOrdersBatch();
+        alert("Todos os pedidos foram excluídos com sucesso.");
+      } catch (erro) {
+        console.error("Erro ao excluir todos os pedidos:", erro);
+        if (erro.code === "auth/wrong-password") {
+          alert("Senha incorreta. A exclusão foi cancelada.");
+        } else {
+          alert("Não foi possível excluir os pedidos. Veja o console para detalhes.");
+        }
+      }
+    });
+
+    // -----------------------------
+    // 18) Exportar para Excel (CSV) usando ponto e vírgula
+    // -----------------------------
+    btnExportExcel.addEventListener("click", async () => {
+      try {
+        const snapshot = await db.collection("orders").orderBy("timestamp", "desc").get();
+        // Cabeçalhos separados por ponto e vírgula
+        let csv = `"Nome";"Idade";"Tamanho";"Localidade"\r\n`;
+        snapshot.forEach((doc) => {
+          const d = doc.data();
+          const safeName = d.name.replace(/"/g, '""');
+          const safeLocation = d.location.replace(/"/g, '""');
+          csv += `"${safeName}";${d.age};${d.size};"${safeLocation}"\r\n`;
+        });
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "pedidos.csv";
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error("Erro ao gerar planilha:", err);
+        alert("Erro ao gerar planilha. Veja console.");
+      }
+    });
+
+    // -----------------------------
+    // 19) Inicialização
+    // -----------------------------
+    window.addEventListener("DOMContentLoaded", () => {
+      resetToLogin();
+    });
+  </script>
+</body>
+</html>
