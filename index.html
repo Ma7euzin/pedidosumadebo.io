@@ -929,12 +929,12 @@
       try {
         const snapshot = await db.collection("orders").orderBy("timestamp", "desc").get();
         // Cabeçalhos separados por ponto e vírgula
-        let csv = `"Nome";"Idade";"Tamanho";"Localidade"\r\n`;
+        let csv = `"Nome";"Idade";"Tipo";"Tamanho";"Localidade"\r\n`;
         snapshot.forEach((doc) => {
           const d = doc.data();
           const safeName = d.name.replace(/"/g, '""');
           const safeLocation = d.location.replace(/"/g, '""');
-          csv += `"${safeName}";${d.age};${d.size};"${safeLocation}"\r\n`;
+          csv += `"${safeName}";${d.age};${d.typeSize};${d.size};"${safeLocation}"\r\n`;
         });
         const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
