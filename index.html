@@ -291,6 +291,8 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
+    const MASTER_EMAIL = "adminumadebo@gmail.com";
+
     // App secundário (para criar gestores sem desconectar o mestre)
     let secondaryApp;
     try {
@@ -344,6 +346,8 @@
     // Estado
     let currentLocality = null; // Nome da localidade para gestor
     let isMaster = false;
+
+    
 
     // -----------------------------
     // 3) Carregar localidades na tela inicial
@@ -400,22 +404,33 @@
     // -----------------------------
     // 6) Autenticar Mestre
     // -----------------------------
-    loginForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const email = emailInput.value.trim();
-      const password = passwordInput.value;
-      loginError.classList.add("hidden");
-      auth.signInWithEmailAndPassword(email, password)
-        .then(() => {
-          isMaster = true;
-          currentLocality = null;
-          showMasterView();
-        })
-        .catch((err) => {
-          loginError.textContent = "Erro ao fazer login: " + err.message;
-          loginError.classList.remove("hidden");
-        });
-    });
+    loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+    loginError.classList.add("hidden");
+
+    try {
+      const userCred = await auth.signInWithEmailAndPassword(email, password);
+      const user = userCred.user;
+
+      // Se não for o e-mail mestre, sai
+      if (user.email.toLowerCase() !== MASTER_EMAIL.toLowerCase()) {
+        await auth.signOut();
+        alert("Acesso negado: somente o e-mail mestre pode entrar aqui.");
+        return;
+      }
+
+      // É o Mestre!
+      isMaster = true;
+      currentLocality = null;
+      showMasterView();
+      loginForm.reset();
+    } catch (err) {
+      loginError.textContent = "Erro ao fazer login: " + err.message;
+      loginError.classList.remove("hidden");
+    }
+  });
 
     // -----------------------------
     // 7) Logout
